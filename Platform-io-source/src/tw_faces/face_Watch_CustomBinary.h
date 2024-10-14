@@ -39,6 +39,7 @@ class FaceWatch_CustomBinary : public tw_face
 		uint16_t month = 0;
 		uint16_t year = 0;
 		int8_t day_offset = -16;
+		uint8_t text_xoffset = 0;
 };
 
 extern FaceWatch_CustomBinary face_watch_custom_binary;

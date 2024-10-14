@@ -55,8 +55,8 @@ void FaceWatch_CustomBinary::draw(bool force)
 			uint8_t digit_xoffset = 14;
 			uint8_t digit_yoffset = 16;
 
-			int x_offset = (display.width - (6 * (posmul + x_space))) / 2;
-			int y_offset = 176; // i cant for the life of me figure out how to fix this!
+			uint8_t text_xoffset = (display.width - (6 * (posmul + x_space))) / 2;
+			uint8_t y_offset = 176; // i cant for the life of me figure out how to fix this!
 
 			// Set Colours
 			int16_t on_color = on_colors[settings.config.custom_binary.binary_clockcolour];
@@ -65,55 +65,39 @@ void FaceWatch_CustomBinary::draw(bool force)
 			int16_t tim_color = RGB(0xff, 0xff, 0xff);
 			int8_t clock_style = settings.config.custom_binary.binary_clockstyle;
 
-			int box_positions[6] = {5, 4, 3, 2, 1, 0};												 // Start with seconds, then minutes, then hours
-			int box_counts[6] = {4, 3, 4, 3, 4, 2};													 // Not all columns need 4 boxes
-			int digit_num[6] = {secs % 10, secs / 10, mins % 10, mins / 10, hours % 10, hours / 10}; // this returns the individual digit for each column
+			uint8_t box_positions[6] = {5, 4, 3, 2, 1, 0};												   // Start with seconds, then minutes, then hours
+			uint8_t box_counts[6] = {4, 3, 4, 3, 4, 2};													   // Not all columns need 4 boxes
+			int8_t digit_num[6] = {	static_cast<int8_t>(secs % 10), static_cast<int8_t>(secs / 10), 
+								   	static_cast<int8_t>(mins % 10), static_cast<int8_t>(mins / 10), 
+									static_cast<int8_t>(hours % 10), static_cast<int8_t>(hours / 10)};     // this pre-calculates the individual digit psoition for each column
 
-			int half_posmul = posmul / 2;
+			uint8_t half_posmul = posmul / 2;
 
-			for (int digit = 0; digit < 6; ++digit)
-			{
-				int xOffset = x_offset + (posmul * box_positions[digit]) + (x_space * box_positions[digit]);
-				for (int box_y = 0; box_y < box_counts[digit]; ++box_y)
-				{
-					// if (is_onoff(, ))
-					if ((digit_num[digit] & (1 << box_y)) != 0)
-						if (clock_style == 0)
-							canvas[canvasid].fillRect(xOffset, y_offset - (box_y * (posmul + y_space)), posmul, posmul, on_color);
-
-						else
-							canvas[canvasid].fillSmoothCircle(xOffset + (half_posmul), y_offset - (box_y * (posmul + y_space)) + (half_posmul), half_posmul, on_color);
-
-					else if (clock_style == 0)
-						canvas[canvasid].fillRect(xOffset, y_offset - (box_y * (posmul + y_space)), posmul, posmul, off_color);
-
-					else
-						canvas[canvasid].fillSmoothCircle(xOffset + (half_posmul), y_offset - (box_y * (posmul + y_space)) + (half_posmul), half_posmul, off_color);
-					if (show_borders)
-					{
-						if (clock_style == 0)
-							canvas[canvasid].drawRect(xOffset, y_offset - (box_y * (posmul + y_space)), posmul, posmul, bdr_color);
-
-						else
-							canvas[canvasid].drawCircle(xOffset + (half_posmul), y_offset - (box_y * (posmul + y_space)) + (half_posmul), half_posmul, bdr_color);
-					}
-				}
-			}
-
-			// Set the text colour to make it readable
 			int16_t digit_backcolor[6] = {off_color, off_color, off_color, off_color, off_color, off_color};
-			for (int i = 0; i < 6; ++i)
-			{
-				if ((digit_num[i] & (1 << 0)) != 0)
-					digit_backcolor[i] = on_color;
-			}
-
-			// Show time in bottom boxes for convenience
 			canvas[canvasid].setFreeFont(Clock_Digit_7SEG[0]);
-			for (int i = 0; i < 6; ++i)
-			{
-				canvas[canvasid].setTextColor(tim_color, digit_backcolor[i]);
-				canvas[canvasid].drawString(String(digit_num[i]), x_offset + (posmul * box_positions[i]) + (x_space * box_positions[i]) + digit_xoffset, y_offset - (0 * (posmul + y_space)) + digit_yoffset);
+
+			for (uint8_t digit = 0; digit < 6; ++digit) {
+    			uint8_t xOffset = text_xoffset + (posmul + x_space) * box_positions[digit];
+
+    			for (uint8_t box_y = 0; box_y < box_counts[digit]; ++box_y) {
+       				bool is_on = (digit_num[digit] & (1 << box_y)) != 0;
+        			uint8_t yPos = y_offset - (box_y * (posmul + y_space));
+
+        			if (clock_style == 0) {
+            			canvas[canvasid].fillRect(xOffset, yPos, posmul, posmul, is_on ? on_color : off_color);
+            			if (show_borders) canvas[canvasid].drawRect(xOffset, yPos, posmul, posmul, bdr_color);
+        			} else {
+            			canvas[canvasid].fillSmoothCircle(xOffset + half_posmul, yPos + half_posmul, half_posmul, is_on ? on_color : off_color);
+            			if (show_borders) canvas[canvasid].drawCircle(xOffset + half_posmul, yPos + half_posmul, half_posmul, bdr_color);
+        			}
+    			}
+			
+			    // Set background color for the bottom box based on the least significant bit
+    			digit_backcolor[digit] = (digit_num[digit] & 1) ? on_color : off_color;
+
+			    // Draw the digit string
+    			canvas[canvasid].setTextColor(tim_color, digit_backcolor[digit]);
+    			canvas[canvasid].drawString(String(digit_num[digit]), xOffset + digit_xoffset, y_offset + digit_yoffset);
 			}
 
 			// Show date below the clock
